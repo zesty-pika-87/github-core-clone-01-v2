@@ -677,16 +677,28 @@ function sidebandPackets(pack: Buffer): Buffer[] {
   return out;
 }
 
-export function buildFetchV2Response(plan: FetchPlan, ackOid: string | null): Buffer {
+/**
+ * Build a v2 fetch response. Per the protocol, the acknowledgments section
+ * is only sent when the client sent haves; a fresh clone (no haves) goes
+ * straight to shallow-info / packfile, and a client that expects the
+ * packfile section first fails if it sees acknowledgments instead.
+ */
+export function buildFetchV2Response(
+  plan: FetchPlan,
+  ackOid: string | null,
+  sendAcks: boolean,
+): Buffer {
   const chunks: Buffer[] = [];
-  chunks.push(pktLine("acknowledgments\n"));
-  if (ackOid) {
-    chunks.push(pktLine(`ACK ${ackOid}\n`));
-    chunks.push(pktLine("ready\n"));
-  } else {
-    chunks.push(pktLine("NAK\n"));
+  if (sendAcks) {
+    chunks.push(pktLine("acknowledgments\n"));
+    if (ackOid) {
+      chunks.push(pktLine(`ACK ${ackOid}\n`));
+      chunks.push(pktLine("ready\n"));
+    } else {
+      chunks.push(pktLine("NAK\n"));
+    }
+    chunks.push(pktFlush());
   }
-  chunks.push(pktFlush());
   if (plan.shallow.length || plan.unshallow.length) {
     chunks.push(pktLine("shallow-info\n"));
     for (const oid of plan.shallow) chunks.push(pktLine(`shallow ${oid}\n`));

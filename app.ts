@@ -197,7 +197,7 @@ async function handleUploadPack(
       if (!cached) {
         const plan = planFetch(lookup, wants, haves, new Set(shallowList), depth);
         const ack = haves.find((h) => repo.objects.has(h)) ?? null;
-        cached = buildFetchV2Response(plan, ack);
+        cached = buildFetchV2Response(plan, ack, haves.length > 0);
         repo.fetchCache.set(cacheKey, cached);
       }
       sendBuffer(res, 200, cached, "application/x-git-upload-pack-result");
