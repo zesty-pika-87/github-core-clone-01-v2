@@ -738,16 +738,30 @@ export interface PushCommand {
 export function parseReceivePackBody(
   buf: Buffer,
 ): { commands: PushCommand[]; pack: Buffer | null } {
-  const { frames, endOffset } = decodePktLines(buf);
+  // The body is pkt-lines up to the first flush, then RAW pack bytes. The
+  // pack is not pkt-line framed, so it must never be fed to the pkt-line
+  // decoder: stop at the flush and take the remainder as the pack.
   const commands: PushCommand[] = [];
+  let off = 0;
   let sawFlush = false;
-  for (const frame of frames) {
-    if (frame.kind === "flush") {
+  while (off < buf.length) {
+    if (off + 4 > buf.length) throw new Error("truncated pkt-line length");
+    const head = buf.toString("ascii", off, off + 4);
+    if (head === "0000") {
       sawFlush = true;
+      off += 4;
       break;
     }
-    if (frame.kind !== "data") continue;
-    const text = frame.data.toString("utf8");
+    if (head === "0001") {
+      off += 4;
+      continue;
+    }
+    const len = parseInt(head, 16);
+    if (!Number.isFinite(len) || len < 4 || off + len > buf.length) {
+      throw new Error(`bad pkt-line length ${head}`);
+    }
+    const text = buf.toString("utf8", off + 4, off + len);
+    off += len;
     const nul = text.indexOf("\0");
     const line = (nul >= 0 ? text.slice(0, nul) : text).replace(/\n$/, "");
     const parts = line.split(" ");
@@ -756,7 +770,7 @@ export function parseReceivePackBody(
     }
   }
   if (!sawFlush) throw new Error("receive-pack body has no flush");
-  const rest = buf.subarray(endOffset);
+  const rest = buf.subarray(off);
   const pack = rest.length >= 12 && rest.toString("ascii", 0, 4) === "PACK" ? rest : null;
   return { commands, pack };
 }
