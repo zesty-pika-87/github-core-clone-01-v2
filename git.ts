@@ -779,8 +779,13 @@ export function buildReceivePackResult(
   results: Array<{ ref: string; ok: boolean; reason?: string }>,
 ): Buffer {
   const chunks: Buffer[] = [];
+  // With side-band-64k the report-status stream is itself pkt-lined inside
+  // band 1: each report line is a pkt-line, and that pkt-line is the payload
+  // of a band-1 sideband packet. Sending raw text inside band 1 makes the
+  // client read "unpa" as a pkt-line length and fail.
   const band1 = (text: string): Buffer => {
-    const payload = Buffer.concat([Buffer.from([1]), Buffer.from(text, "utf8")]);
+    const inner = pktLine(text);
+    const payload = Buffer.concat([Buffer.from([1]), inner]);
     return pktLine(payload);
   };
   chunks.push(band1("unpack ok\n"));
