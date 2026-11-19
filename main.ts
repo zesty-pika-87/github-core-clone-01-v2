@@ -30,7 +30,10 @@ async function run(): Promise<number> {
   const bound = (server.address() as { port: number }).port;
 
   if (!envUrl) {
-    console.log(`forge listening on port ${bound} (no MAKEFUN_ENV_URL set)`);
+    console.log(`forge listening on port ${bound} (no MAKEFUN_ENV_URL set; serving until killed)`);
+    await new Promise<void>(() => {
+      // Stay up: no trial environment to report to.
+    });
     return 0;
   }
 
