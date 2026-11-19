@@ -153,7 +153,10 @@ interface Document {
 
 class Parser {
   private pos = 0;
-  constructor(private tokens: Token[]) {}
+  private tokens: Token[];
+  constructor(tokens: Token[]) {
+    this.tokens = tokens;
+  }
 
   private peek(): Token {
     return this.tokens[this.pos];
