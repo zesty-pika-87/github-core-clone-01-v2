@@ -95,11 +95,12 @@ function parseV0Fetch(body: Buffer): {
     const shallow: string[] = [];
     let depth: number | null = null;
     for (const frame of frames) {
-      if (frame.kind === "flush") break;
+      // v0 sends a flush after the want lines and another after `done`;
+      // neither ends the request, so keep collecting across them.
       if (frame.kind !== "data") continue;
       const text = frame.data.toString("utf8").replace(/\n$/, "");
-      if (text.startsWith("want ")) wants.push(text.slice(5).trim());
-      else if (text.startsWith("have ")) haves.push(text.slice(5).trim());
+      if (text.startsWith("want ")) wants.push(text.split(" ")[1] ?? "");
+      else if (text.startsWith("have ")) haves.push(text.split(" ")[1] ?? "");
       else if (text.startsWith("shallow ")) shallow.push(text.slice(8).trim());
       else if (text.startsWith("deepen ")) {
         const n = Number(text.slice(7).trim());
@@ -247,7 +248,9 @@ async function handleReceivePack(
   const { commands, pack } = parsed;
   if (pack) {
     try {
-      const read = readPack(pack);
+      // Thin packs delta against objects the server already holds; resolve
+      // those bases from the repo, not just from the pack itself.
+      const read = readPack(pack, { resolveBase: (oid) => repo.objects.get(oid) });
       for (const [oid, obj] of read.objects) {
         if (!repo.objects.has(oid)) repo.objects.set(oid, obj);
       }
