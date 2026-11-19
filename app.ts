@@ -393,14 +393,11 @@ async function dispatch(
     return;
   }
 
-  // MCP.
+  // MCP. (No dispatch-level JSON check here: a non-JSON body must answer
+  // HTTP 400 with JSON-RPC -32700, which the MCP handler itself produces.)
   if (segments[0] === "mcp" && segments.length === 1) {
     if (method !== "POST") {
       jsonError(res, 405, "Method Not Allowed");
-      return;
-    }
-    if (body && body.length > 0 && !isValidJson(body)) {
-      jsonError(res, 400, "Problems parsing JSON");
       return;
     }
     await handleMcp({ store }, req, res, body);
