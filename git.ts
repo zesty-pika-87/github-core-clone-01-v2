@@ -697,13 +697,13 @@ export function buildFetchV2Response(
     } else {
       chunks.push(pktLine("NAK\n"));
     }
-    chunks.push(pktFlush());
+    chunks.push(pktDelim());
   }
   if (plan.shallow.length || plan.unshallow.length) {
     chunks.push(pktLine("shallow-info\n"));
     for (const oid of plan.shallow) chunks.push(pktLine(`shallow ${oid}\n`));
     for (const oid of plan.unshallow) chunks.push(pktLine(`unshallow ${oid}\n`));
-    chunks.push(pktFlush());
+    chunks.push(pktDelim());
   }
   const pack = writePack(
     [...plan.objects.entries()].map(([oid, obj]) => ({ oid, type: obj.type, data: obj.data })),
