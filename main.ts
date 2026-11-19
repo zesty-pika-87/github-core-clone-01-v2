@@ -1,5 +1,7 @@
-// Entry point for the forge. Runs one process on an ephemeral port, tells the
-// trial environment which port to reach it on, then waits until the environment
+// Entry point for the forge (v2: rebuilt for the clone hot path — the whole
+// fetch response is cached per repository generation, so the entry itself
+// stays thin). Runs one process on an ephemeral port, tells the trial
+// environment which port to reach it on, then waits until the environment
 // says the trial is finished. Nothing else lives here: the server itself is
 // built in app.ts, so this file stays small and easy to reason about.
 
@@ -41,7 +43,7 @@ async function run(): Promise<number> {
     });
     for (;;) {
       if (Date.now() > deadline) return 1;
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 50));
       let done = false;
       try {
         const status = await json(`${envUrl}/done`, { method: "GET" });
