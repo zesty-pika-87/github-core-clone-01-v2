@@ -792,6 +792,11 @@ export function buildReceivePackResult(
   for (const r of results) {
     chunks.push(band1(r.ok ? `ok ${r.ref}\n` : `ng ${r.ref} ${r.reason ?? "failed"}\n`));
   }
+  // The demultiplexed band-1 stream is itself a pkt-line stream, so it needs
+  // its own terminating flush inside band 1; the plain flush after it only
+  // ends the outer sideband stream. Without the inner flush the client reads
+  // the two report lines and then hits end-of-stream waiting for the flush.
+  chunks.push(pktLine(Buffer.concat([Buffer.from([1]), Buffer.from("0000", "ascii")])));
   chunks.push(pktFlush());
   return Buffer.concat(chunks);
 }
