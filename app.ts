@@ -35,6 +35,15 @@ import { VIEWER, ZERO_OID } from "./util.ts";
 
 const V2_UPLOAD_AD = buildV2UploadAd();
 
+function isValidJson(body: Buffer): boolean {
+  try {
+    JSON.parse(body.toString("utf8"));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function isAuthorized(req: IncomingMessage, token: string): boolean {
   const header = req.headers.authorization ?? "";
   if (token) return header === `Bearer ${token}`;
@@ -376,6 +385,10 @@ async function dispatch(
       jsonError(res, 405, "Method Not Allowed");
       return;
     }
+    if (body && body.length > 0 && !isValidJson(body)) {
+      jsonError(res, 400, "Problems parsing JSON");
+      return;
+    }
     await handleGraphql({ store }, req, res, body);
     return;
   }
@@ -386,12 +399,20 @@ async function dispatch(
       jsonError(res, 405, "Method Not Allowed");
       return;
     }
+    if (body && body.length > 0 && !isValidJson(body)) {
+      jsonError(res, 400, "Problems parsing JSON");
+      return;
+    }
     await handleMcp({ store }, req, res, body);
     return;
   }
 
   // REST v3 (fast path for the read workload first).
   if (segments[0] === "api" && segments[1] === "v3") {
+    if (body && body.length > 0 && !isValidJson(body)) {
+      jsonError(res, 400, "Problems parsing JSON");
+      return;
+    }
     const restSegments = segments.slice(2);
     if (
       method === "GET" &&

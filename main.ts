@@ -39,11 +39,21 @@ async function run(): Promise<number> {
 
   const deadline = Date.now() + timeoutMs;
   try {
-    await json(`${envUrl}/register`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ port: bound }),
-    });
+    // Register with the trial environment; the environment may take a moment
+    // to come up, so retry until the deadline instead of dying on one refusal.
+    for (;;) {
+      try {
+        await json(`${envUrl}/register`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ port: bound }),
+        });
+        break;
+      } catch {
+        if (Date.now() > deadline) return 1;
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+    }
     for (;;) {
       if (Date.now() > deadline) return 1;
       await new Promise((resolve) => setTimeout(resolve, 50));

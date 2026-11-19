@@ -453,6 +453,68 @@ const REPO_FIELDS: Record<string, string> = {
   visibility: "RepositoryVisibility",
 };
 
+const ISSUE_FIELDS: Record<string, string> = {
+  id: "ID",
+  number: "Int",
+  title: "String",
+  state: "IssueState",
+  body: "String",
+  url: "URI",
+  createdAt: "DateTime",
+  updatedAt: "DateTime",
+  closedAt: "DateTime",
+  author: "Actor",
+  labels: "LabelConnection",
+  comments: "IssueCommentConnection",
+  user: "User",
+};
+
+const PULL_REQUEST_FIELDS: Record<string, string> = {
+  id: "ID",
+  number: "Int",
+  title: "String",
+  state: "PullRequestState",
+  body: "String",
+  headRefName: "String",
+  baseRefName: "String",
+  headRef: "Ref",
+  baseRef: "Ref",
+  mergeable: "MergeableState",
+  merged: "Boolean",
+  files: "PullRequestChangedFileConnection",
+  url: "URI",
+  createdAt: "DateTime",
+  updatedAt: "DateTime",
+  closedAt: "DateTime",
+  mergedAt: "DateTime",
+  author: "Actor",
+};
+
+const TYPE_FIELDS: Record<string, Record<string, string>> = {
+  Repository: REPO_FIELDS,
+  Issue: ISSUE_FIELDS,
+  PullRequest: PULL_REQUEST_FIELDS,
+  User: { login: "String", id: "ID", name: "String", email: "String" },
+  Query: { viewer: "User", repository: "Repository", node: "Node", __type: "__Type" },
+  Mutation: {
+    createIssue: "CreateIssuePayload",
+    closeIssue: "CloseIssuePayload",
+    createPullRequest: "CreatePullRequestPayload",
+    mergePullRequest: "MergePullRequestPayload",
+    addComment: "AddCommentPayload",
+  },
+};
+
+const TYPE_KINDS: Record<string, string> = {
+  Repository: "OBJECT",
+  Issue: "OBJECT",
+  PullRequest: "OBJECT",
+  User: "OBJECT",
+  Query: "OBJECT",
+  Mutation: "OBJECT",
+  SearchType: "ENUM",
+};
+
 const FIELDS: Record<string, Record<string, Resolver>> = {
   Query: {
     viewer: () => userObj(),
@@ -496,12 +558,13 @@ const FIELDS: Record<string, Record<string, Resolver>> = {
           fields: null,
         };
       }
-      if (name === "Repository") {
+      const fields = TYPE_FIELDS[name];
+      if (fields) {
         return {
           __typename: "__Type",
           name,
-          kind: "OBJECT",
-          fields: Object.keys(REPO_FIELDS).map((n) => ({ __typename: "__Field", name: n })),
+          kind: TYPE_KINDS[name] ?? "OBJECT",
+          fields: Object.keys(fields).map((n) => ({ __typename: "__Field", name: n })),
           enumValues: null,
         };
       }
